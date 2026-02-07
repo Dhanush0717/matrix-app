@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Operations - Library System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Smart Library Matrix System</h1>
+            <p>20×20 Matrix Operations with Real-Time Analytics</p>
+        </header>
+
+        <div class="control-panel">
+            <h2>Operations</h2>
+            <div class="buttons">
+                <button onclick="generateMatrix()" class="btn btn-primary">🎲 Generate New Matrix</button>
+                <button onclick="showRowSums()" class="btn btn-info">📊 Row Sums (1D Array)</button>
+                <button onclick="showColSums()" class="btn btn-info">📈 Column Sums (1D Array)</button>
+                <button onclick="swapDiagonals()" class="btn btn-warning">🔄 Swap Diagonals</button>
+                <button onclick="calculateDeterminant()" class="btn btn-success">🔢 Determinant</button>
+                <button onclick="showRowAverages()" class="btn btn-secondary">📉 Row Averages</button>
+                <button onclick="showColAverages()" class="btn btn-secondary">📉 Column Averages</button>
+                <button onclick="showFullReport()" class="btn btn-dark">📋 Full Report</button>
+            </div>
+        </div>
+
+        <div class="matrix-section">
+            <h2>Library Borrowing Matrix (20×20)</h2>
+            <div class="matrix-info">
+                <span>Rows: Book Categories</span>
+                <span>Cols: Days 1-20</span>
+                <span id="matrix-status">Status: Ready</span>
+            </div>
+            <div id="matrix-container" class="matrix-grid"></div>
+        </div>
+
+        <div id="results-panel" class="results-panel hidden">
+            <h3>Results</h3>
+            <div id="results-content"></div>
+            <button onclick="closeResults()" class="btn btn-close">✕ Close</button>
+        </div>
+
+        <div class="stats-grid" id="stats-container">
+            <div class="stat-card">
+                <h4>Total Books</h4>
+                <p id="total-books">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>Busiest Day</h4>
+                <p id="busiest-day">-</p>
+            </div>
+            <div class="stat-card">
+                <h4>Popular Category</h4>
+                <p id="popular-category">-</p>
+            </div>
+            <div class="stat-card">
+                <h4>Determinant</h4>
+                <p id="det-value">-</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
