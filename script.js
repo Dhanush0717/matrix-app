@@ -1,5 +1,37 @@
-class LibraryMatrix {
+class IMatrixOperations {
+    getRowSums() {
+        throw new Error("Abstract method: getRowSums() must be implemented");
+    }
+    
+    getColSums() {
+        throw new Error("Abstract method: getColSums() must be implemented");
+    }
+    
+    swapDiagonals() {
+        throw new Error("Abstract method: swapDiagonals() must be implemented");
+    }
+    
+    getDeterminant() {
+        throw new Error("Abstract method: getDeterminant() must be implemented");
+    }
+    
+    getRowAverages() {
+        throw new Error("Abstract method: getRowAverages() must be implemented");
+    }
+    
+    getColAverages() {
+        throw new Error("Abstract method: getColAverages() must be implemented");
+    }
+}
+
+// ============================================
+// CONCRETE IMPLEMENTATION
+// Implements HOW the operations work
+// ============================================
+
+class LibraryMatrix extends IMatrixOperations {
     constructor(size = 20) {
+        super();  // Call parent constructor
         this.size = size;
         this.data = [];
         this.categories = [
@@ -21,7 +53,6 @@ class LibraryMatrix {
             }
             this.data.push(row);
         }
-        this.updateStats();
     }
     
     getValue(row, col) {
@@ -37,6 +68,7 @@ class LibraryMatrix {
         }
     }
     
+
     getRowSums() {
         let sums = new Array(this.size).fill(0);
         for (let i = 0; i < this.size; i++) {
@@ -44,9 +76,10 @@ class LibraryMatrix {
                 sums[i] += this.data[i][j];
             }
         }
-        return sums;
+        return { array: sums, type: "1D Array", length: this.size };
     }
     
+ 
     getColSums() {
         let sums = new Array(this.size).fill(0);
         for (let j = 0; j < this.size; j++) {
@@ -54,7 +87,7 @@ class LibraryMatrix {
                 sums[j] += this.data[i][j];
             }
         }
-        return sums;
+        return { array: sums, type: "1D Array", length: this.size };
     }
     
     swapDiagonals() {
@@ -65,8 +98,7 @@ class LibraryMatrix {
                 this.data[j][i] = temp;
             }
         }
-        this.updateStats();
-        return true;
+        return { success: true, message: "Diagonals swapped successfully" };
     }
     
     getDeterminant() {
@@ -100,35 +132,54 @@ class LibraryMatrix {
             }
         }
         
-        return det;
+        return { value: det, scientific: det.toExponential(4) };
     }
     
+    // ============================================
+    // REQUIREMENT 5: ROW AVERAGE
+    // Implements abstract method from IMatrixOperations
+    // ============================================
     getRowAverages() {
-        let sums = this.getRowSums();
+        let sums = this.getRowSums().array;
         return sums.map(sum => sum / this.size);
     }
     
     getColAverages() {
-        let sums = this.getColSums();
+        let sums = this.getColSums().array;
         return sums.map(sum => sum / this.size);
     }
     
-    updateStats() {
-        let rowSums = this.getRowSums();
-        let colSums = this.getColSums();
+    getMatrixData() {
+        return {
+            size: this.size,
+            data: this.data,
+            categories: this.categories
+        };
+    }
+    
+    getFullReport() {
+        let rowSums = this.getRowSums().array;
+        let colSums = this.getColSums().array;
         let total = rowSums.reduce((a, b) => a + b, 0);
         
-        let maxCatIdx = rowSums.indexOf(Math.max(...rowSums));
-        let maxDayIdx = colSums.indexOf(Math.max(...colSums));
-        
-        document.getElementById('total-books').textContent = total.toLocaleString();
-        document.getElementById('busiest-day').textContent = `Day ${maxDayIdx + 1}`;
-        document.getElementById('popular-category').textContent = this.categories[maxCatIdx];
-        
-        let det = this.getDeterminant();
-        document.getElementById('det-value').textContent = det.toExponential(2);
+        return {
+            rowSums: rowSums,
+            colSums: colSums,
+            rowAverages: this.getRowAverages(),
+            colAverages: this.getColAverages(),
+            determinant: this.getDeterminant(),
+            totalBooks: total,
+            busiestDay: colSums.indexOf(Math.max(...colSums)) + 1,
+            popularCategory: this.categories[rowSums.indexOf(Math.max(...rowSums))],
+            matrix: this.data
+        };
     }
 }
+
+// ============================================
+// UI CONTROLLER
+// Handles webpage interaction
+// ============================================
 
 let library = new LibraryMatrix();
 
@@ -137,19 +188,22 @@ window.onload = function() {
 };
 
 function renderMatrix() {
+    let data = library.getMatrixData();
     const container = document.getElementById('matrix-container');
     container.innerHTML = '';
     
+    // Column headers
     container.appendChild(createCell('', 'matrix-row-header'));
     for (let j = 0; j < 20; j++) {
-        container.appendChild(createCell(`D${j+1}`, 'matrix-header'));
+        container.appendChild(createCell('D' + (j + 1), 'matrix-header'));
     }
     
+    // Rows with data
     for (let i = 0; i < 20; i++) {
-        container.appendChild(createCell(library.categories[i], 'matrix-row-header'));
+        container.appendChild(createCell(data.categories[i], 'matrix-row-header'));
         
         for (let j = 0; j < 20; j++) {
-            let value = library.getValue(i, j);
+            let value = data.data[i][j];
             let cellClass = 'matrix-cell';
             
             if (value < 15) cellClass += ' cell-low';
@@ -157,12 +211,13 @@ function renderMatrix() {
             else cellClass += ' cell-high';
             
             let cell = createCell(value, cellClass);
-            cell.title = `${library.categories[i]} - ${library.timePeriods[j]}: ${value} books`;
+            cell.title = data.categories[i] + ' - Day ' + (j + 1) + ': ' + value + ' books';
             container.appendChild(cell);
         }
     }
     
     document.getElementById('matrix-status').textContent = 'Status: Generated';
+    updateStats();
 }
 
 function createCell(content, className) {
@@ -172,6 +227,22 @@ function createCell(content, className) {
     return div;
 }
 
+function updateStats() {
+    let rowSums = library.getRowSums().array;
+    let colSums = library.getColSums().array;
+    let total = rowSums.reduce(function(a, b) { return a + b; }, 0);
+    
+    document.getElementById('total-books').textContent = total.toLocaleString();
+    document.getElementById('busiest-day').textContent = 'Day ' + (colSums.indexOf(Math.max.apply(null, colSums)) + 1);
+    document.getElementById('popular-category').textContent = library.categories[rowSums.indexOf(Math.max.apply(null, rowSums))];
+    document.getElementById('det-value').textContent = library.getDeterminant().scientific;
+}
+
+// ============================================
+// BUTTON HANDLERS
+// Connect UI to ADT operations
+// ============================================
+
 function generateMatrix() {
     library.generateRandomData();
     renderMatrix();
@@ -179,141 +250,120 @@ function generateMatrix() {
 }
 
 function showRowSums() {
-    let sums = library.getRowSums();
+    let data = library.getRowSums();
     let html = '<div class="array-display">';
-    html += '<span class="array-label">Row Sums (1D Array) - Total books per category:</span>';
+    html += '<span class="array-label">Row Sums from ADT (1D Array):</span>';
     
     for (let i = 0; i < 20; i++) {
-        html += `<div class="array-item" title="${library.categories[i]}">
-            ${library.categories[i].substr(0,3)}: ${sums[i]}
-        </div>`;
+        html += '<div class="array-item" title="' + library.categories[i] + '">' + 
+                library.categories[i].substr(0, 3) + ': ' + data.array[i] + '</div>';
     }
     
     html += '</div>';
-    html += `<p><strong>Array Length:</strong> ${sums.length}</p>`;
-    html += `<p><strong>Total Books:</strong> ${sums.reduce((a,b) => a+b, 0)}</p>`;
+    html += '<p><strong>Type:</strong> ' + data.type + '</p>';
+    html += '<p><strong>Length:</strong> ' + data.length + '</p>';
+    html += '<p><strong>Total Books:</strong> ' + data.array.reduce(function(a, b) { return a + b; }, 0) + '</p>';
     
-    showResults('Row Sums (1D Array)', html);
+    showResults('Row Sums (ADT Implementation)', html);
 }
 
 function showColSums() {
-    let sums = library.getColSums();
+    let data = library.getColSums();
     let html = '<div class="array-display">';
-    html += '<span class="array-label">Column Sums (1D Array) - Total books per day:</span>';
+    html += '<span class="array-label">Column Sums from ADT (1D Array):</span>';
     
     for (let j = 0; j < 20; j++) {
-        html += `<div class="array-item">Day ${j+1}: ${sums[j]}</div>`;
+        html += '<div class="array-item">Day ' + (j + 1) + ': ' + data.array[j] + '</div>';
     }
     
     html += '</div>';
-    html += `<p><strong>Array Length:</strong> ${sums.length}</p>`;
-    html += `<p><strong>Busiest Day:</strong> Day ${sums.indexOf(Math.max(...sums)) + 1}</p>`;
+    html += '<p><strong>Type:</strong> ' + data.type + '</p>';
+    html += '<p><strong>Length:</strong> ' + data.length + '</p>';
+    html += '<p><strong>Busiest Day:</strong> Day ' + (data.array.indexOf(Math.max.apply(null, data.array)) + 1) + '</p>';
     
-    showResults('Column Sums (1D Array)', html);
+    showResults('Column Sums (ADT Implementation)', html);
 }
 
 function swapDiagonals() {
-    library.swapDiagonals();
+    let result = library.swapDiagonals();
     renderMatrix();
-    showNotification('Diagonals swapped! Upper ↔ Lower');
+    showNotification('Diagonals swapped! ' + result.message);
 }
 
 function calculateDeterminant() {
     let det = library.getDeterminant();
-    let html = `
-        <div style="text-align: center; padding: 20px;">
-            <h2 style="font-size: 3rem; color: #667eea; margin: 20px 0;">
-                ${det.toExponential(4)}
-            </h2>
-            <p style="font-size: 1.2rem; color: #6c757d;">Matrix Determinant (20×20)</p>
-            <hr style="margin: 20px 0;">
-            <p><strong>Interpretation:</strong></p>
-            <p>${Math.abs(det) > 1000 ? '✅ High correlation' : '⚠️ Low correlation'}</p>
-        </div>
-    `;
-    showResults('Determinant Calculation', html);
+    let html = '<div style="text-align: center; padding: 20px;">';
+    html += '<h2 style="font-size: 3rem; color: #667eea; margin: 20px 0;">' + det.scientific + '</h2>';
+    html += '<p style="font-size: 1.2rem; color: #6c757d;">Matrix Determinant (20×20)</p>';
+    html += '<hr style="margin: 20px 0;">';
+    html += '<p><strong>Raw Value:</strong> ' + det.value + '</p>';
+    html += '<p><strong>Calculated by ADT:</strong> LibraryMatrix.getDeterminant()</p>';
+    html += '</div>';
+    
+    showResults('Determinant (ADT Implementation)', html);
 }
 
 function showRowAverages() {
     let avgs = library.getRowAverages();
     let html = '<div class="array-display">';
-    html += '<span class="array-label">Row Averages - Average books per category per day:</span>';
+    html += '<span class="array-label">Row Averages from ADT:</span>';
     
     for (let i = 0; i < 20; i++) {
-        html += `<div class="array-item" style="background: #43e97b;">
-            ${library.categories[i].substr(0,3)}: ${avgs[i].toFixed(2)}
-        </div>`;
+        html += '<div class="array-item" style="background: #43e97b;">' + 
+                library.categories[i].substr(0, 3) + ': ' + avgs[i].toFixed(2) + '</div>';
     }
     
     html += '</div>';
-    html += `<p><strong>Formula:</strong> Row Sum ÷ 20 days</p>`;
+    html += '<p><strong>Formula:</strong> Row Sum ÷ 20 days</p>';
     
-    showResults('Row Averages', html);
+    showResults('Row Averages (ADT Implementation)', html);
 }
 
 function showColAverages() {
     let avgs = library.getColAverages();
     let html = '<div class="array-display">';
-    html += '<span class="array-label">Column Averages - Average books per day per category:</span>';
+    html += '<span class="array-label">Column Averages from ADT:</span>';
     
     for (let j = 0; j < 20; j++) {
-        html += `<div class="array-item" style="background: #a8edea;">
-            Day ${j+1}: ${avgs[j].toFixed(2)}
-        </div>`;
+        html += '<div class="array-item" style="background: #a8edea;">' + 
+                'Day ' + (j + 1) + ': ' + avgs[j].toFixed(2) + '</div>';
     }
     
     html += '</div>';
-    html += `<p><strong>Formula:</strong> Column Sum ÷ 20 categories</p>`;
+    html += '<p><strong>Formula:</strong> Column Sum ÷ 20 categories</p>';
     
-    showResults('Column Averages', html);
+    showResults('Column Averages (ADT Implementation)', html);
 }
 
 function showFullReport() {
-    let rowSums = library.getRowSums();
-    let colSums = library.getColSums();
-    let det = library.getDeterminant();
+    let r = library.getFullReport();
     
-    let maxCatIdx = rowSums.indexOf(Math.max(...rowSums));
-    let minCatIdx = rowSums.indexOf(Math.min(...rowSums));
-    let maxDayIdx = colSums.indexOf(Math.max(...colSums));
-    let minDayIdx = colSums.indexOf(Math.min(...colSums));
+    let html = '<div style="line-height: 1.8;">';
+    html += '<h4 style="color: #667eea; margin-top: 15px;">📊 ADT GENERATED REPORT</h4>';
+    html += '<ul style="list-style: none; padding-left: 0;">';
+    html += '<li>🏆 <strong>Most Popular:</strong> ' + r.popularCategory + ' (' + r.rowSums[r.categories.indexOf(r.popularCategory)] + ' books)</li>';
+    html += '<li>🔥 <strong>Busiest Day:</strong> Day ' + r.busiestDay + ' (' + r.colSums[r.busiestDay - 1] + ' books)</li>';
+    html += '</ul>';
     
-    let total = rowSums.reduce((a, b) => a + b, 0);
+    html += '<h4 style="color: #667eea; margin-top: 20px;">📈 STATISTICS</h4>';
+    html += '<table style="width: 100%; border-collapse: collapse;">';
+    html += '<tr style="background: #f8f9fa;"><td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Total Books</strong></td>';
+    html += '<td style="padding: 10px; border: 1px solid #dee2e6;">' + r.totalBooks.toLocaleString() + '</td></tr>';
+    html += '<tr><td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Average per Category</strong></td>';
+    html += '<td style="padding: 10px; border: 1px solid #dee2e6;">' + (r.totalBooks / 20).toFixed(1) + '</td></tr>';
+    html += '</table>';
     
-    let html = `
-        <div style="line-height: 1.8;">
-            <h4 style="color: #667eea; margin-top: 15px;">📊 POPULARITY INSIGHTS</h4>
-            <ul style="list-style: none; padding-left: 0;">
-                <li>🏆 <strong>Most Popular:</strong> ${library.categories[maxCatIdx]} (${rowSums[maxCatIdx]} books)</li>
-                <li>📉 <strong>Least Popular:</strong> ${library.categories[minCatIdx]} (${rowSums[minCatIdx]} books)</li>
-                <li>🔥 <strong>Busiest Day:</strong> Day ${maxDayIdx + 1} (${colSums[maxDayIdx]} books)</li>
-                <li>🌙 <strong>Quietest Day:</strong> Day ${minDayIdx + 1} (${colSums[minDayIdx]} books)</li>
-            </ul>
-            
-            <h4 style="color: #667eea; margin-top: 20px;">📈 STATISTICAL SUMMARY</h4>
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr style="background: #f8f9fa;">
-                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Total Books</strong></td>
-                    <td style="padding: 10px; border: 1px solid #dee2e6;">${total.toLocaleString()}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Average per Category</strong></td>
-                    <td style="padding: 10px; border: 1px solid #dee2e6;">${(total/20).toFixed(1)}</td>
-                </tr>
-                <tr style="background: #f8f9fa;">
-                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>Average per Day</strong></td>
-                    <td style="padding: 10px; border: 1px solid #dee2e6;">${(total/20).toFixed(1)}</td>
-                </tr>
-            </table>
-            
-            <h4 style="color: #667eea; margin-top: 20px;">🔢 MATRIX HEALTH</h4>
-            <p><strong>Determinant:</strong> ${det.toExponential(3)}</p>
-            <p><strong>Status:</strong> ${Math.abs(det) > 1000 ? '✅ Balanced' : '⚠️ Low Correlation'}</p>
-        </div>
-    `;
+    html += '<h4 style="color: #667eea; margin-top: 20px;">🔢 MATRIX HEALTH</h4>';
+    html += '<p><strong>Determinant:</strong> ' + r.determinant.scientific + '</p>';
+    html += '<p><strong>Status:</strong> ' + (Math.abs(r.determinant.value) > 1000 ? '✅ Balanced' : '⚠️ Low Correlation') + '</p>';
+    html += '</div>';
     
-    showResults('Complete Analytics Report', html);
+    showResults('Complete Report (All ADT Operations)', html);
 }
+
+// ============================================
+// UI UTILITIES
+// ============================================
 
 function showResults(title, content) {
     document.getElementById('results-content').innerHTML = content;
@@ -335,37 +385,17 @@ function closeResults() {
 
 function showNotification(message) {
     let notif = document.createElement('div');
-    notif.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #43e97b;
-        color: white;
-        padding: 15px 25px;
-        border-radius: 10px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        z-index: 2000;
-        font-weight: bold;
-        animation: slideIn 0.3s ease;
-    `;
+    notif.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #43e97b; color: white; padding: 15px 25px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 2000; font-weight: bold; animation: slideIn 0.3s ease;';
     notif.textContent = message;
     document.body.appendChild(notif);
     
-    setTimeout(() => {
+    setTimeout(function() {
         notif.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notif.remove(), 300);
+        setTimeout(function() { notif.remove(); }, 300);
     }, 3000);
 }
 
+// Add animation styles
 let style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(400px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(400px); opacity: 0; }
-    }
-`;
+style.textContent = '@keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } } @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }';
 document.head.appendChild(style);
